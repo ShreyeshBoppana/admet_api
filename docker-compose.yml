@@ -1,0 +1,140 @@
+version: "3.7"
+
+services:
+  ###########################################################################
+  #######             DB SERVICES                                     #######
+  ###########################################################################
+
+
+  ###########################################################################
+  #######                      SAMPLE-FASTAPI                         #######
+  ###########################################################################
+  retro_synth-fastapi:
+    depends_on:
+      - mongodb
+    ports:
+      - 8000:8000
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+    command: >
+      /bin/sh -c "
+      sleep 3;
+      uvicorn app.main:app --reload --host 0.0.0.0;
+      "      
+    volumes:
+      - ./server:/app   
+    environment:
+      ##### CORE PARAMS #####
+      - PROJECT_NAME=FastAPI Server
+      - API_V1_STR=/api/v1
+      - MODE=development
+
+    networks:
+      - reverse_synth
+  retro_synth-fastapi-worker:
+    build:
+      context: ./
+      dockerfile: ./server/Dockerfile.worker
+    command: >
+      /bin/sh -c "
+      PYTHONPATH=. poetry run tasktiger --host redis;
+      "      
+    volumes:
+      - ./server:/app
+    environment:
+      ##### CORE PARAMS #####
+      - PROJECT_NAME=FastAPI Server
+      - API_V1_STR=/api/v1
+      - MODE=development
+
+    networks:
+      - reverse_synth
+  mongodb:
+    container_name: mongodb
+    image: mongo:4.4.0-rc7
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    ports:
+      - 27017:27017
+    volumes:
+      - ./mongo-init-scripts:/mongo-seed
+      - ./volumes/mongodb/:/data/db/
+    networks:
+      - reverse_synth
+
+  redis:
+    image: redis:6.2-alpine
+    restart: always
+    ports:
+      - '6379:6379'
+    # command: redis-server --save 60 1 --loglevel warning
+    command: redis-server --loglevel warning
+    networks:
+      - reverse_synth
+    volumes: 
+      - ./volumes/redis/data:/data
+  
+  pyrmd:
+    build:
+      context: ./pyrmd
+    ports:
+      - "8005:8005"
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - reverse_synth
+
+  minio:
+    image: minio/minio:latest
+    ports:
+      # - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./volumes/minio/data:/export
+      - ./volumes/minio/config:/root/.minio
+    environment:
+      - MINIO_ROOT_USER=minio
+      - MINIO_ROOT_PASSWORD=password
+    networks:
+      - reverse_synth
+    command: server --console-address :9001 /export
+
+  createbuckets:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    networks:
+      - reverse_synth
+    entrypoint: >
+      /bin/sh -c "
+      apk add --no-cache bash;
+      sleep 5;
+      /usr/bin/mc config host add myminio http://minio:9000 minio password;
+      /usr/bin/mc mb myminio/reverse-synth;
+      /usr/bin/mc policy set download myminio/reverse_synth;
+      exit 0;
+      "
+  
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx_config/default.conf:/etc/nginx/nginx.conf
+      - ./nginx_config/fullchain.pem:/etc/nginx/fullchain.pem
+      - ./nginx_config/privkey.pem:/etc/nginx/privkey.pem
+    depends_on:
+      - retro_synth-fastapi
+    networks:
+      - reverse_synth
+
+
+networks:
+  reverse_synth:

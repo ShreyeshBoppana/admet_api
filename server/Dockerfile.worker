@@ -1,0 +1,25 @@
+FROM python:3.9.16
+
+WORKDIR /app
+
+COPY ./model_files /model_files
+ADD https://ndownloader.figshare.com/files/25584743 /model_files/uspto_filter_model.hdf5
+ADD https://zenodo.org/record/7341155/files/uspto_keras_model.hdf5 /model_files/uspto_model.hdf5
+ADD https://zenodo.org/record/7341155/files/uspto_ringbreaker_keras_model.hdf5 /model_files/uspto_ringbreaker_model.hdf5
+ADD https://zenodo.org/record/7341155/files/uspto_unique_templates.csv.gz /model_files/uspto_templates.csv.gz
+ADD https://zenodo.org/record/7341155/files/uspto_ringbreaker_unique_templates.csv.gz /model_files/uspto_ringbreaker_templates.csv.gz
+ADD https://ndownloader.figshare.com/files/23086469 /model_files/zinc_stock.hdf5
+
+# Install Poetry
+RUN curl -sSL https://install.python-poetry.org | POETRY_HOME=/opt/poetry python - --version 1.2.0 && \
+    cd /usr/local/bin && \
+    ln -s /opt/poetry/bin/poetry && \
+    poetry config virtualenvs.create false
+
+# Copy poetry.lock* in case it doesn't exist in the repo
+COPY ./server/pyproject.toml ./server/poetry.lock* /
+
+# Allow installing dev dependencies to run tests
+RUN bash -c "poetry install --no-root --without dev --with worker"
+
+ENV PYTHONPATH=.
