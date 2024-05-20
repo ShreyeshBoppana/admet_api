@@ -25,8 +25,6 @@ optional = true
 [tool.poetry.group.worker.dependencies]
 aizynthfinder = "^3.7.0"
 deepchem = "^2.7.1"
-tensorflow-addons = "^0.20.0"
-tensorflow-probability = "^0.19.0"
 torch = "2.0.0"
 torchvision = "^0.15.1"
 pytorch-lightning = "^2.0.2"
@@ -42,8 +40,6 @@ mol2vec = {git = "https://github.com/samoturk/mol2vec"}
 xgboost = "1.6"
 jaxlib = "^0.4.7"
 keras = "2.12.0"
-tensorflow-cpu = "^2.12.0"
-tensorflow-serving-api = "^2.12.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
