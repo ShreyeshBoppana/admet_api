@@ -20,6 +20,7 @@ RUN curl -sSL https://install.python-poetry.org | POETRY_HOME=/opt/poetry python
 COPY ./server/pyproject.toml ./server/poetry.lock* /
 
 # Allow installing dev dependencies to run tests
+RUN bash -c "poetry update"
 RUN bash -c "poetry install --no-root --without dev --with worker"
 
 ENV PYTHONPATH=.
