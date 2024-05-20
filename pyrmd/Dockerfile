@@ -6,7 +6,7 @@ RUN conda env create -f /pyrmd_environment.yml
 SHELL ["conda", "run", "-n", "pyrmd", "/bin/bash", "-c"]
 
 # Install dependencies
-RUN pip install fastapi psutil python-multipart uvicorn pydantic arq redis
+RUN pip install fastapi python-multipart uvicorn pydantic arq redis
 
 # Copy the application files
 COPY . /app
